@@ -17,43 +17,59 @@ pid_t ish_pid;
 int main(int argc, char* argv[], char* envp[]) {
     char s[LINELEN];
     job *curr_job;
-		struct sigaction sigact;
+	struct sigaction sigact;
 
-		ish_pid = getpid();
-		init_jobs_manager(&jobm);
-		memset(&sigact, 0, sizeof(sigact));
-		sigact.sa_handler = handler;
-		if (sigaction(SIGINT, &sigact, NULL) < 0){
-			perror("sigaction");
-			exit(EXIT_FAILURE);
-		}
-		if (sigaction(SIGTSTP, &sigact, NULL) < 0){
-			perror("sigaction");
-			exit(EXIT_FAILURE);
-		}
-		if (sigaction(SIGCHLD, &sigact, NULL) < 0){
-			perror("sigaction");
-			exit(EXIT_FAILURE);
-		}
-		if (sigaction(SIGTTOU, &sigact, NULL) < 0){
-			perror("sigaction");
-			exit(EXIT_FAILURE);
-		}
+	ish_pid = getpid();
+	init_jobs_manager(&jobm);
+	memset(&sigact, 0, sizeof(sigact));
+	sigact.sa_handler = handler;
+	if (sigaction(SIGINT, &sigact, NULL) < 0){
+		perror("sigaction");
+		exit(EXIT_FAILURE);
+	}
+	if (sigaction(SIGTSTP, &sigact, NULL) < 0){
+		perror("sigaction");
+		exit(EXIT_FAILURE);
+	}
+	if (sigaction(SIGCHLD, &sigact, NULL) < 0){
+		perror("sigaction");
+		exit(EXIT_FAILURE);
+	}
+	if (sigaction(SIGTTOU, &sigact, NULL) < 0){
+		perror("sigaction");
+		exit(EXIT_FAILURE);
+	}
 
     while(get_line(s, LINELEN)) {
         if (!strcmp(s, "exit\n"))
             break;
-				else if (!strcmp(s, "bg\n")){
-					resume_bg_job(&jobm);
+		else if (!strcmp(s, "bg\n")){
+			resume_bg_job(&jobm);
+		}
+		else if (!strcmp(s, "jobs\n")){
+			print_bg_jobs(&jobm);
+		}
+		else if (!strncmp(s, "cd", 2)){
+			if (strlen(s) <= 4){
+				if (chdir(getenv("HOME")) != 0) {
+      				perror("cd");
+    			}
+			}
+			else{
+				char *path = &s[3];
+				if (path[strlen(path) - 1] == '\n'){
+					path[strlen(path) - 1] = '\0';
 				}
-				else if (!strcmp(s, "jobs\n")){
-					print_bg_jobs(&jobm);
-				}
-				else{
-					curr_job = parse_line(s);
-					exec_job(curr_job, &jobm, envp);
-				}
-				check_bg_jobs(&jobm);
+				if (chdir(path) != 0) {
+      				perror("cd");
+    			}
+			}
+		}
+		else{
+			curr_job = parse_line(s);
+			exec_job(curr_job, &jobm, envp);
+		}
+		check_bg_jobs(&jobm);
     }
 		return 0;
 }
